@@ -41,7 +41,7 @@ local function CreateReplicator(Name)
 		if Replicator.Replicas[Id] then
 			return
 		end
-		
+
 		local Replica = {
 			__type = Replica,
 			Changed = LemonSignal.new(),
@@ -54,7 +54,7 @@ local function CreateReplicator(Name)
 			Cleaner = Trove.new(),
 			_Callbacks = {},
 			_WriteCallbacks = {},
-			_OldData = Util.CopyTable(Data, true)
+			_OldData = Util.CopyTable(Data, true),
 		}
 
 		function Replica:Write(FunctionName: string, ...)
@@ -200,7 +200,7 @@ local function CreateReplicator(Name)
 		function Replica:Destroy()
 			Replicator.Replicas[Id] = nil
 			Replica.Destroying:Fire()
-			task.defer(Replica.Destroying.Destroy, Replica.Destroying)
+			task.delay(1, Replica.Destroying.Destroy, Replica.Destroying)
 			Replica.Changed:Destroy()
 			table.clear(Replica)
 		end

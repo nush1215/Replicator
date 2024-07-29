@@ -67,7 +67,7 @@ MainBridge.OnServerInvoke = function(Player)
 			_Replicas[Replica.Name][Id] = {
 				Tags = Util.CopyTable(Replica.Tags, true),
 				Data = Util.CopyTable(Replica.Data, true),
-				WriteLib = Replica.WriteLibModule 
+				WriteLib = Replica.WriteLibModule,
 			}
 		end
 	end
@@ -95,9 +95,9 @@ function ReplicaServer.NewReplica(Config: ReplicaConfig)
 		Changed = LemonSignal.new(),
 		Destroying = LemonSignal.new(),
 	}
-	
+
 	Replica.WriteLib = Replica.WriteLibModule and LoadWriteLib(Replica.WriteLibModule)
-	
+
 	local function FireBridge(Args)
 		if Config.To == "All" then
 			MainBridge:Fire(BridgeNet.AllPlayers(), Args)
@@ -125,19 +125,22 @@ function ReplicaServer.NewReplica(Config: ReplicaConfig)
 		FireBridge(_Args)
 	end)
 
-	Replica.Cleaner:Add(MainBridge:Connect(function(Player, Args)
-		local Event = Args[1]
+	Replica.Cleaner:Add(
+		MainBridge:Connect(function(Player, Args)
+			local Event = Args[1]
 
-		if Event ~= "Request" then
-			return
-		end
-
-		if Args[2] == Config.Name and Args[3] == Id then
-			for _, Callback in Replica.ServerEvents do
-				task.spawn(Callback, Player, table.unpack(Args, 4))
+			if Event ~= "Request" then
+				return
 			end
-		end
-	end), "Disconnect")
+
+			if Args[2] == Config.Name and Args[3] == Id then
+				for _, Callback in Replica.ServerEvents do
+					task.spawn(Callback, Player, table.unpack(Args, 4))
+				end
+			end
+		end),
+		"Disconnect"
+	)
 
 	Replica.Data = Config.Data
 	Replica._OldData = Util.CopyTable(Replica.Data, true)
@@ -210,7 +213,7 @@ function ReplicaServer.NewReplica(Config: ReplicaConfig)
 						end
 						Replica.Changed:Fire(_Indicies, nil, CurrentValue[Key])
 					end
-	
+
 					return
 				else
 					CurrentValue -= Value
@@ -271,7 +274,7 @@ function ReplicaServer.NewReplica(Config: ReplicaConfig)
 
 			WriteFunctionFlag = false
 
-			local Args = { "Write", Replica.Name, Id, WriteFunction, ...}
+			local Args = { "Write", Replica.Name, Id, WriteFunction, ... }
 
 			FireBridge(Args)
 
@@ -374,9 +377,9 @@ function ReplicaServer.NewReplica(Config: ReplicaConfig)
 	end
 
 	function Replica:Destroy()
-		MainBridge:Fire({ "Destroy", Config.Name, Id })
+		FireBridge({ "Destroy", Config.Name, Id })
 		Replica.Destroying:Fire()
-		task.defer(Replica.Destroying.Destroy, Replica.Destroying)
+		task.delay(1, Replica.Destroying.Destroy, Replica.Destroying)
 		self.Changed:Destroy()
 		self.Cleaner:Destroy()
 		table.clear(self.Changed)
