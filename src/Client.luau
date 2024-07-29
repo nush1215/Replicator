@@ -1,6 +1,6 @@
-local BridgeNet = require(script.Parent.Parent.Parent.BridgeNet) :: { any }
-local LemonSignal = require(script.Parent.Parent.Parent.Signal) :: { any }
-local Trove = require(script.Parent.Parent.Parent.Trove) :: { any }
+local BridgeNet = require(script.Parent.Parent.BridgeNet) :: { any }
+local LemonSignal = require(script.Parent.Parent.Signal) :: { any }
+local Trove = require(script.Parent.Parent.Trove) :: { any }
 
 local Util = require(script.Parent.Table) :: { any }
 
@@ -44,18 +44,18 @@ local function CreateReplicator(Name)
 		
 		local Replica = {
 			__type = Replica,
+			Changed = LemonSignal.new(),
+			Destroying = LemonSignal.new(),
+			WriteFunctionFlag = false,
+			WriteLib = WriteLib and require(WriteLib),
+			Id = Id,
+			Tags = Tags,
+			Data = Data,
+			Cleaner = Trove.new(),
+			_Callbacks = {},
+			_WriteCallbacks = {},
+			_OldData = Util.CopyTable(Data, true)
 		}
-		
-		Replica.WriteFunctionFlag = false
-		Replica.WriteLib = WriteLib and require(WriteLib)
-		Replica.Id = Id
-		Replica.Tags = Tags
-		Replica.Data = Data
-		Replica.Changed = LemonSignal.new()
-		Replica.Cleaner = Trove.new()
-		Replica._Callbacks = {}
-		Replica._WriteCallbacks = {}
-		Replica._OldData = Util.CopyTable(Data, true)
 
 		function Replica:Write(FunctionName: string, ...)
 			if not Replica.WriteLib then
@@ -199,6 +199,8 @@ local function CreateReplicator(Name)
 
 		function Replica:Destroy()
 			Replicator.Replicas[Id] = nil
+			Replica.Destroying:Fire()
+			task.defer(Replica.Destroying.Destroy, Replica.Destroying)
 			Replica.Changed:Destroy()
 			table.clear(Replica)
 		end

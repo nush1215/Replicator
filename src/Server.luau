@@ -3,9 +3,9 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Util = require(script.Parent.Table) :: { any }
 
-local BridgeNet = require(script.Parent.Parent.Parent.BridgeNet) :: { any }
-local LemonSignal = require(script.Parent.Parent.Parent.Signal) :: { any }
-local Trove = require(script.Parent.Parent.Parent.Trove) :: { any }
+local BridgeNet = require(script.Parent.Parent.BridgeNet) :: { any }
+local LemonSignal = require(script.Parent.Parent.Signal) :: { any }
+local Trove = require(script.Parent.Parent.Trove) :: { any }
 
 export type ReplicaConfig = {
 	Name: string,
@@ -82,20 +82,22 @@ local ReplicaServer = {
 function ReplicaServer.NewReplica(Config: ReplicaConfig)
 	local Id = HttpService:GenerateGUID(false)
 
-	local Replica = {
-		__type = Replica
-	}
-	
 	local WriteFunctionFlag: boolean = false
 
-	Replica.WriteLibModule = Config.WriteLib
+	local Replica = {
+		__type = Replica,
+		WriteLibModule = Config.WriteLib,
+		Tags = Config.Tags or {},
+		To = Config.To,
+		Name = Config.Name,
+		Cleaner = Trove.new(),
+		ServerEvents = {},
+		Changed = LemonSignal.new(),
+		Destroying = LemonSignal.new(),
+	}
+	
 	Replica.WriteLib = Replica.WriteLibModule and LoadWriteLib(Replica.WriteLibModule)
-	Replica.Tags = Config.Tags or {}
-	Replica.To = Config.To
-	Replica.Name = Config.Name
-	Replica.Cleaner = Trove.new()
-	Replica.ServerEvents = {}
-
+	
 	local function FireBridge(Args)
 		if Config.To == "All" then
 			MainBridge:Fire(BridgeNet.AllPlayers(), Args)
@@ -117,9 +119,6 @@ function ReplicaServer.NewReplica(Config: ReplicaConfig)
 	local Args = { "Create", Config.Name, Id, Replica.Tags, Config.Data, Replica.WriteLibModule }
 
 	FireBridge(Args)
-
-	--local Bridge = Bridges[Config.Name]
-	Replica.Changed = LemonSignal.new()
 
 	Replica.Changed:Connect(function(Indices, Value, OldValue)
 		local _Args = { "Changed", Config.Name, Id, Indices, Value, OldValue }
@@ -376,6 +375,8 @@ function ReplicaServer.NewReplica(Config: ReplicaConfig)
 
 	function Replica:Destroy()
 		MainBridge:Fire({ "Destroy", Config.Name, Id })
+		Replica.Destroying:Fire()
+		task.defer(Replica.Destroying.Destroy, Replica.Destroying)
 		self.Changed:Destroy()
 		self.Cleaner:Destroy()
 		table.clear(self.Changed)
