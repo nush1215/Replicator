@@ -160,6 +160,7 @@ function ReplicaServer.NewReplica(Config: ReplicaConfig): Types.ServerReplica
 		end
 
 		local LastIndex = Indicies[#Indicies]
+		LastIndex = tonumber(LastIndex) or LastIndex
 		local Operator = if typeof(LastIndex) == "string" then LastIndex:match("[+%%-*/^]$") else nil
 
 		if Operator then
